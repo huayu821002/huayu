@@ -4,31 +4,15 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get('category')
-    const search = searchParams.get('search')
-    const trending = searchParams.get('trending')
-    const featured = searchParams.get('featured')
+    const search = searchParams.get('search') || ''
 
     const where: Record<string, unknown> = {}
-
-    if (category) {
-      where.category = { slug: category }
-    }
-
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ]
-    }
-
-    if (trending === 'true') {
-      where.isTrending = true
-    }
-
-    if (featured === 'true') {
-      where.isFeatured = true
     }
 
     const products = await prisma.product.findMany({
@@ -39,7 +23,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data: products })
   } catch (error) {
-    console.error('Products API error:', error)
+    console.error('Admin products GET error:', error)
     return NextResponse.json({ success: false, error: 'Failed to fetch products' }, { status: 500 })
   }
 }
@@ -57,7 +41,7 @@ export async function POST(request: Request) {
     const product = await prisma.product.create({
       data: {
         name,
-        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+        slug: slug || name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString(36),
         description,
         shortDesc,
         price: parseFloat(price),
@@ -68,7 +52,7 @@ export async function POST(request: Request) {
         minOrderQty: parseInt(minOrderQty) || 1,
         weight: weight ? parseFloat(weight) : null,
         dimensions,
-        images: typeof images === 'string' ? images : JSON.stringify(images),
+        images: Array.isArray(images) ? JSON.stringify(images) : images,
         modelImage,
         sizeChart,
         sku,
@@ -76,7 +60,7 @@ export async function POST(request: Request) {
         inventory: parseInt(inventory) || 0,
         lowStockAlert: parseInt(lowStockAlert) || 10,
         categoryId,
-        tags,
+        tags: Array.isArray(tags) ? JSON.stringify(tags) : tags,
         isActive: isActive !== false,
         isFeatured: isFeatured === true,
         isTrending: isTrending === true,
@@ -86,7 +70,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: product })
   } catch (error) {
-    console.error('Create product error:', error)
+    console.error('Admin products POST error:', error)
     return NextResponse.json({ success: false, error: 'Failed to create product' }, { status: 500 })
   }
 }
