@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET categories settings
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const setting = await prisma.siteSetting.findUnique({
@@ -9,30 +10,18 @@ export async function GET() {
     })
     
     if (setting?.value) {
-      return NextResponse.json({ success: true, data: JSON.parse(setting.value) })
+      return NextResponse.json({ success: true, data: JSON.parse(setting.value) }, {
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+      })
     }
     
-    // Return default categories if no settings exist
-    return NextResponse.json({ success: true, data: getDefaultCategories() })
-  } catch (error) {
-    return NextResponse.json({ success: true, data: getDefaultCategories() })
-  }
-}
-
-// POST save categories settings
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    
-    await prisma.siteSetting.upsert({
-      where: { key: 'homepage_categories' },
-      update: { value: JSON.stringify(body) },
-      create: { key: 'homepage_categories', value: JSON.stringify(body) }
+    return NextResponse.json({ success: true, data: getDefaultCategories() }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
     })
-    
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  } catch (error) {
+    return NextResponse.json({ success: true, data: getDefaultCategories() }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+    })
   }
 }
 
